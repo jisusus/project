@@ -22,20 +22,6 @@ def handler(conn):
     logging.info(" - opcode: {}".format(rmsg["opcode"]))
     logging.info(" - type: {}".format(rmsg["type"]))
 
-    smsg = {}
-    smsg["opcode"] = "Bob"
-    smsg["type"] = "NO RSA"
-    logging.debug("smsg: {}".format(smsg))
-
-    sjs = json.dumps(smsg)
-    logging.debug("sjs: {}".format(sjs))
-
-    sbytes = sjs.encode("ascii")
-    logging.debug("sbytes: {}".format(sbytes))
-
-    conn.send(sbytes)
-    logging.info("[*] Sent: {}".format(sjs))
-
     conn.close()
 
 def run(addr, port):

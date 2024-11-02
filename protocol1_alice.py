@@ -29,16 +29,6 @@ def run(addr, port):
     rbytes = conn.recv(1024)
     logging.debug("rbytes: {}".format(rbytes))
 
-    rjs = rbytes.decode("ascii")
-    logging.debug("rjs: {}".format(rjs))
-
-    rmsg = json.loads(rjs)
-    logging.debug("rmsg: {}".format(rmsg))
-    
-    logging.info("[*] Received: {}".format(rjs))
-    logging.info(" - opcode: {}".format(rmsg["opcode"]))
-    logging.info(" - type: {}".format(rmsg["type"]))
-
     conn.close()
 
 def command_line_args():
