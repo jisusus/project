@@ -5,6 +5,35 @@ import logging
 import json
 import random
 import base64
+from Crypto.PublicKey import RSA
+from Crypto.Util import number
+
+def generate_rsa_keypair():
+    # p와 q는 400과 500 사이의 소수로 설정
+    p = number.getPrime(9, randfunc=None)  # 9비트의 작은 소수(테스트용으로만 사용)
+    q = number.getPrime(9, randfunc=None)
+    while not (400 <= p < 500 and 400 <= q < 500):
+        p = number.getPrime(9)
+        q = number.getPrime(9)
+
+    # RSA 키 쌍 생성
+    n = p * q
+    e = 65537
+    phi = (p - 1) * (q - 1)
+    d = number.inverse(e, phi)
+
+    public_key = e * n
+    private_key = d
+
+    # 전송할 데이터 구조 (Bob -> Alice)
+    data = {
+        "opcode": 0,
+        "type": "RSAKey",
+        "private": private_key,
+        "public": public_key,
+        "parameter": {"p": p, "q": q}
+    }
+    return data
 
 def handler(conn):
     random.seed(None)
@@ -21,6 +50,18 @@ def handler(conn):
     logging.info("[*] Received: {}".format(rjs))
     logging.info(" - opcode: {}".format(rmsg["opcode"]))
     logging.info(" - type: {}".format(rmsg["type"]))
+
+    rsa = generate_rsa_keypair()
+    logging.debug("rsa: {}".format(rsa))
+    
+    sjs = json.dumps(rsa)
+    logging.debug("sjs: {}".format(sjs))
+
+    sbytes = sjs.encode("ascii")
+    logging.debug("sbytes: {}".format(sbytes))
+
+    conn.send(sbytes)
+    logging.info("[*] Sent: {}".format(sjs))
 
     conn.close()
 

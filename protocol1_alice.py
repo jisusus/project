@@ -12,6 +12,7 @@ def run(addr, port):
 
     random.seed(None)
 
+    #opcode랑 type 보내기
     smsg = {} 
     smsg["opcode"] = "0"
     smsg["type"] = "RSAKey"
@@ -26,8 +27,26 @@ def run(addr, port):
     conn.send(sbytes)
     logging.info("[*] Sent: {}".format(sjs))
 
+
+    # RSA Key pair 받아오기
     rbytes = conn.recv(1024)
     logging.debug("rbytes: {}".format(rbytes))
+
+    rjs = rbytes.decode("ascii")
+    logging.debug("rjs: {}".format(rjs))
+
+    rmsg = json.loads(rjs)
+    logging.debug("rmsg: {}".format(rmsg))
+
+    logging.info("[*] Received: {}".format(rjs))
+    logging.info(" - opcode: {}".format(rmsg["opcode"]))
+    logging.info(" - type: {}".format(rmsg["type"]))
+    logging.info(" - private: {}".format(rmsg["private"]))
+    logging.info(" - public: {}".format(rmsg["public"]))
+    logging.info(" - parameter: {}".format(rmsg["parameter"]))
+    logging.info("   - p: {}".format(rmsg["parameter"]["p"]))
+    logging.info("   - q: {}".format(rmsg["parameter"]["q"]))
+
 
     conn.close()
 
