@@ -4,6 +4,38 @@ import logging
 import json
 import random
 import base64
+from Crypto.PublicKey import RSA
+from Crypto.Util import number
+
+def verify_p_q(data):
+    p = data["parameter"]["p"]
+    q = data["parameter"]["q"]
+
+    # p와 q가 소수인지 확인
+    if not (number.isPrime(p) and number.isPrime(q)):
+        print("p 또는 q가 소수가 아닙니다.")
+        return False
+    return True
+
+def verify_RSA_Keypair(data):
+    p = data["parameter"]["p"]
+    q = data["parameter"]["q"]
+    public_key = data["public"]
+    private_key = data["private"]
+
+    # 공개 키와 개인 키 검증
+    n = p * q
+    e = 65537
+    phi = (p - 1) * (q - 1)
+    d = private_key
+
+    # (e * d) % phi = 1을 만족하는지 확인
+    if (e * d) % phi != 1:
+        print("RSA 키 쌍이 올바르지 않습니다.")
+        return False
+
+    print("RSA 키 쌍이 유효합니다.")
+    print(f"Public Key: {public_key}, Private Key: {private_key}")
 
 def run(addr, port):
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -47,6 +79,10 @@ def run(addr, port):
     logging.info("   - p: {}".format(rmsg["parameter"]["p"]))
     logging.info("   - q: {}".format(rmsg["parameter"]["q"]))
 
+    correct_pq = verify_p_q(rmsg)
+    print(f"p and q are {correct_pq}")
+
+    verify_RSA_Keypair(rmsg)
 
     conn.close()
 
