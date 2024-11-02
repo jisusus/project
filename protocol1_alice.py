@@ -25,7 +25,7 @@ def verify_RSA_Keypair(data):
 
     # 공개 키와 개인 키 검증
     n = p * q
-    e = 65537
+    e = public_key
     phi = (p - 1) * (q - 1)
     d = private_key
 
@@ -46,7 +46,7 @@ def run(addr, port):
 
     #opcode랑 type 보내기
     smsg = {} 
-    smsg["opcode"] = "0"
+    smsg["opcode"] = 0
     smsg["type"] = "RSAKey"
     logging.debug("smsg: {}".format(smsg))
 
