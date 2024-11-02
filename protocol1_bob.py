@@ -22,7 +22,7 @@ def generate_rsa_keypair():
     phi = (p - 1) * (q - 1)
     d = number.inverse(e, phi)
 
-    public_key = e * n
+    public_key = e
     private_key = d
 
     # 전송할 데이터 구조 (Bob -> Alice)
