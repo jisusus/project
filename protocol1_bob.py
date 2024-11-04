@@ -47,7 +47,7 @@ def multiplicative_inverse(a, b):
         b = r    
     return y0
 
-def run(a, b):
+def make_mulitiplicative_inverse(a, b):
     y = multiplicative_inverse(a, b)
     while y < 0:
         y += a
@@ -77,7 +77,7 @@ def generate_rsa_keypair():
     n = p * q
     phi = (p - 1) * (q - 1)
     e = make_random_relatively_prime(phi)
-    d = run(phi, e)
+    d = make_mulitiplicative_inverse(phi, e)
 
     public_key = e
     private_key = d
