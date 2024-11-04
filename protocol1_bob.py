@@ -5,8 +5,6 @@ import logging
 import json
 import random
 import base64
-from Crypto.PublicKey import RSA
-from Crypto.Util import number
 import random
 
 def is_prime_number(x):
@@ -55,6 +53,21 @@ def run(a, b):
         y += a
     return y
 
+def gcd(a, b):
+    if b == 0:
+        return a
+    elif a % b == 0:
+        return b
+    else:
+        return gcd(b, a % b)
+
+def make_random_relatively_prime(a):
+    b = random.randrange(400, 500)
+    if gcd(a, b) == 1:
+        return b
+    else:
+        return make_random_relatively_prime(a)
+    
 def generate_rsa_keypair():
     # p와 q는 400과 500 사이의 소수로 설정
     p = make_prime_number(400, 500)
@@ -62,8 +75,8 @@ def generate_rsa_keypair():
 
     # RSA 키 쌍 생성
     n = p * q
-    e = 65537
     phi = (p - 1) * (q - 1)
+    e = make_random_relatively_prime(phi)
     d = run(phi, e)
 
     public_key = e
