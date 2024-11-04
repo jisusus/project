@@ -7,20 +7,64 @@ import random
 import base64
 from Crypto.PublicKey import RSA
 from Crypto.Util import number
+import random
+
+def is_prime_number(x):
+    for i in range(2, x):
+        if x % i == 0:
+            return False
+    return True
+
+def make_prime_number(a, b):
+    p = random.randrange(a, b)
+    if is_prime_number(p) == True:
+        return p
+    else:
+        return make_prime_number(a, b)
+    
+def mod(a, b):
+    if a<0 and b<0:
+        q = - (a // -b)
+        r = a - (b * q)
+    elif b == 0:
+        print("Please enter non-zero at b")
+    else:
+        q = a // b
+        r = a % b
+    return q, r
+
+def multiplicative_inverse(a, b):
+    y0 = 0
+    y1 = 1
+    r = 1
+    a = a 
+    b = b
+    
+    while r != 0:
+        q, r = mod(a, b)
+        y = y0 - y1*q
+        y0 = y1
+        y1 = y
+        a = b
+        b = r    
+    return y0
+
+def run(a, b):
+    y = multiplicative_inverse(a, b)
+    while y < 0:
+        y += a
+    return y
 
 def generate_rsa_keypair():
     # p와 q는 400과 500 사이의 소수로 설정
-    p = number.getPrime(9, randfunc=None)  # 9비트의 작은 소수(테스트용으로만 사용)
-    q = number.getPrime(9, randfunc=None)
-    while not (400 <= p < 500 and 400 <= q < 500):
-        p = number.getPrime(9)
-        q = number.getPrime(9)
+    p = make_prime_number(400, 500)
+    q = make_prime_number(400, 500)
 
     # RSA 키 쌍 생성
     n = p * q
     e = 65537
     phi = (p - 1) * (q - 1)
-    d = number.inverse(e, phi)
+    d = run(phi, e)
 
     public_key = e
     private_key = d
