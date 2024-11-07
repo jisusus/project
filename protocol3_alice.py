@@ -20,7 +20,10 @@ def run(addr, port):
     random.seed(None)
 
     smsg = {} 
-    smsg["name"] = "Alice"
+    smsg["opcode"] = 0
+    smsg["type"] = "DH"
+    logging.debug("smsg: {}".format(smsg))
+    
     key = random.randbytes(32)
     smsg["random"] = base64.b64encode(key).decode()
     logging.debug("smsg: {}".format(smsg))

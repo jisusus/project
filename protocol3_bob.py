@@ -9,6 +9,57 @@ from Crypto.Cipher import AES
 
 BLOCK_SIZE = 16
 
+def mod(a, b):
+    if a<0 and b<0:
+        q = - (a // -b)
+        r = a - (b * q)
+    elif b == 0:
+        print("Please enter non-zero at b")
+    else:
+        q = a // b
+        r = a % b
+    return q, r
+
+def is_prime_number(x):
+    for i in range(2, x):
+        if x % i == 0:
+            return False
+    return True
+
+def make_prime_number(a, b):
+    p = random.randrange(a, b)
+    if is_prime_number(p) == True:
+        return p
+    else:
+        return make_prime_number(a, b)
+    
+def make_generator(a):
+    i = random.randrange(1, a)
+    remainder = set()
+    
+    for j in range(1, a):
+        q, r = mod(i ** j, a)
+        remainder.add(r)
+        
+    if len(remainder) == a-1:
+        return i
+    else:
+        return make_generator(a)
+    
+def generate_DH_keypair():
+    p = make_prime_number(400, 500)
+    g = make_generator(p)
+    b = random.randrange(1, p)
+    public_key = mod(g ** b, p)
+    
+    data = {
+        "opcode": 1,
+        "type": "DH",
+        "public": public_key,
+        "parameter": {"p": p, "g": g}
+    }
+    return p, b, data
+    
 def encrypt(key, msg):
     pad = BLOCK_SIZE - len(msg)
     msg = msg + pad * chr(pad)
@@ -28,15 +79,10 @@ def handler(conn, msg):
     logging.debug("rmsg: {}".format(rmsg))
 
     logging.info("[*] Received: {}".format(rjs))
-    logging.info(" - name: {}".format(rmsg["name"]))
-    logging.info(" - random: {}".format(rmsg["random"]))
+    logging.info(" - opcode: {}".format(rmsg["opcode"]))
+    logging.info(" - type: {}".format(rmsg["type"]))
 
-    key = base64.b64decode(rmsg["random"])
-
-    smsg = {}
-    smsg["name"] = "Bob"
-    encrypted = encrypt(key, msg)
-    smsg["encryption"] = base64.b64encode(encrypted).decode()
+    p, b, smsg = generate_DH_keypair()
     logging.debug("smsg: {}".format(smsg))
 
     sjs = json.dumps(smsg)
@@ -48,6 +94,24 @@ def handler(conn, msg):
     conn.send(sbytes)
     logging.info("[*] Sent: {}".format(sjs))
 
+    rbytes_1 = conn.recv(1024)
+    logging.debug("rbytes: {}".format(rbytes_1))
+    
+    rjs_1 = rbytes_1.decode("ascii")
+    logging.debug("rjs: {}".format(rjs_1))
+    
+    rmsg_1 = json.loads(rjs_1)
+    logging.debug("rmsg: {}".format(rmsg_1))
+
+    logging.info("[*] Received: {}".format(rjs_1))
+    logging.info(" - opcode: {}".format(rmsg_1["opcode"]))
+    logging.info(" - type: {}".format(rmsg_1["type"]))
+    logging.info(" - public: {}".format(rmsg_1["public"]))
+    
+    public_alice = rmsg_1["public"]
+    DH_shared_secret = mod(public_alice ** b, p)
+    DH_shared_secret.to_bytes(2, byteorder = "big")
+    
     conn.close()
 
 def run(addr, port, msg):
