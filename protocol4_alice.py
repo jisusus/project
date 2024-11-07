@@ -72,15 +72,48 @@ def recieve_msg(conn):
 
     rmsg = json.loads(rjs)
     logging.info("rmsg: {}".format(rmsg))
+    
+    return rmsg
 
+def error_handler(rmsg,conn):
+    p = rmsg["parameter"]["p"]
+    g = rmsg["parameter"]["g"]
+    if not is_prime(p):
+        error = "incorrect prime number"
+    elif not is_gen(g,p):
+        error = "incorrect generator"
+    else:
+        return
+    
+    logging.info("[*] Error: {}".format(error))
+    
+    data = {
+        "opcode": 3,
+        "error": error
+    }
+    
+    sjs = json.dumps(data)
+    logging.debug("sjs: {}".format(sjs))
+    
+    sbytes = sjs.encode("ascii")
+    logging.debug("sbytes: {}".format(sbytes))
+
+    conn.send(sbytes)
+    logging.info("[*] Sent: {}".format(sjs))
+
+    conn.close()
+    
 def run(addr, port):
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     conn.connect((addr, port))
     logging.info("Alice is connected to {}:{}".format(addr, port))
 
     init_msg(conn)
-    recieve_msg(conn)
+    rmsg = recieve_msg(conn)
 
+    error = error_handler(rmsg,conn)
+
+    
 def command_line_args():
     parser = argparse.ArgumentParser()
     parser.add_argument("-a", "--addr", metavar="<bob's address>", help="Bob's address", type=str, required=True)

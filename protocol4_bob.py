@@ -4,6 +4,7 @@ import argparse
 import logging
 import json
 import random
+import base64
 
 def mod(a,n):
     return a%n
@@ -66,6 +67,13 @@ def DH_private(g,n):
     private = random.randint(1,n)
     return private
 
+def public_to_base64(public):
+    print(public)
+    public = public.to_bytes(2,"big")
+    public = base64.b64encode(public).decode('ascii')
+    print(public)
+    return public
+
 def DH_sendkeys(public,p,g,conn):
     data = {
         "opcode": 1,
@@ -97,13 +105,14 @@ def handler(conn):
     logging.info(" - opcode: {}".format(rmsg["opcode"]))
     logging.info(" - type: {}".format(rmsg["type"]))
     
-    p = gen_prime(False)
-    g = gen_gen(False,p)
+    p = gen_prime(random.choice([True,False]))
+    g = gen_gen(random.choice([True,False]),p)
     
     private = DH_private(g,p)
     public = mod(g**private, p)
+    public_b64 = public_to_base64(public)
     
-    DH_sendkeys(public,p,g,conn)
+    DH_sendkeys(public_b64,p,g,conn)
 
 def run(addr, port):
     bob = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
