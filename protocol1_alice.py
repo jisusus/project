@@ -4,15 +4,19 @@ import logging
 import json
 import random
 import base64
-from Crypto.PublicKey import RSA
-from Crypto.Util import number
+
+def is_prime_number(x):
+    for i in range(2, x):
+        if x % i == 0:
+            return False
+    return True
 
 def verify_p_q(data):
     p = data["parameter"]["p"]
     q = data["parameter"]["q"]
 
     # p와 q가 소수인지 확인
-    if not (number.isPrime(p) and number.isPrime(q)):
+    if not (is_prime_number(p) and is_prime_number(q)):
         print("p 또는 q가 소수가 아닙니다.")
         return False
     return True
