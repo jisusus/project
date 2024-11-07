@@ -1,7 +1,8 @@
 import json
 from math import isqrt
 import base64
-from Crypto.Cipher import AES
+from Cryptodome.Cipher import AES
+
 
 def decrypt(key, encrypted):
     aes = AES.new(key, AES.MODE_ECB)
