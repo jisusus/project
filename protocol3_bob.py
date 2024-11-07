@@ -115,7 +115,8 @@ def handler(conn, msg):
     DH_shared_secret = (public_alice ** b) % p
     
     DH_shared_secret.to_bytes(2, byteorder = "big")
-    AES_key = base64.b64decode(DH_shared_secret * 16)
+    AES_key = DH_shared_secret * 16
+    AES_key = DH_shared_secret.to_bytes(32, byteorder='big')
     
     smsg_2 = {}
     smsg_2["opcode"] = 2
@@ -148,7 +149,7 @@ def handler(conn, msg):
     logging.info(" - type: {}".format(rmsg_2["type"]))
     logging.info(" - encryption: {}".format(rmsg_2["encryption"]))
     
-    decrypted_msg = decrypt(AES_key, rmsg_2["encryption"])
+    decrypted_msg = decrypt(AES_key, base64.b64decode(rmsg_2["encryption"])).decode()
     logging.info("[*] Decrypted: {}".format(decrypted_msg))
     
     conn.close()
