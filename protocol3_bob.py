@@ -50,7 +50,7 @@ def generate_DH_keypair():
     p = make_prime_number(400, 500)
     g = make_generator(p)
     b = random.randrange(1, p)
-    public_key = mod(g ** b, p)
+    public_key = (g ** b) % p
     
     data = {
         "opcode": 1,
@@ -65,6 +65,10 @@ def encrypt(key, msg):
     msg = msg + pad * chr(pad)
     aes = AES.new(key, AES.MODE_ECB)
     return aes.encrypt(msg.encode())
+
+def decrypt(key, encrypted):
+    aes = AES.new(key, AES.MODE_ECB)
+    return aes.decrypt(encrypted)
 
 def handler(conn, msg):
     random.seed(None)
@@ -92,7 +96,6 @@ def handler(conn, msg):
     logging.debug("sbytes: {}".format(sbytes))
 
     conn.send(sbytes)
-    logging.info("[*] Sent: {}".format(sjs))
 
     rbytes_1 = conn.recv(1024)
     logging.debug("rbytes: {}".format(rbytes_1))
@@ -109,8 +112,44 @@ def handler(conn, msg):
     logging.info(" - public: {}".format(rmsg_1["public"]))
     
     public_alice = rmsg_1["public"]
-    DH_shared_secret = mod(public_alice ** b, p)
+    DH_shared_secret = (public_alice ** b) % p
+    
     DH_shared_secret.to_bytes(2, byteorder = "big")
+    AES_key = base64.b64decode(DH_shared_secret * 16)
+    
+    smsg_2 = {}
+    smsg_2["opcode"] = 2
+    smsg_2["type"] = "AES"
+    encrypted = encrypt(AES_key, msg)
+    
+    smsg_2["encryption"] = base64.b64encode(encrypted).decode()
+    logging.debug("smsg: {}".format(smsg_2))
+
+    sjs_2 = json.dumps(smsg_2)
+    logging.debug("sjs: {}".format(sjs_2))
+
+    sbytes_2 = sjs_2.encode("ascii")
+    logging.debug("sbytes: {}".format(sbytes_2))
+
+    conn.send(sbytes_2)
+    logging.info("[*] Sent: {}".format(sjs))
+    
+    rbytes_2 = conn.recv(1024)
+    logging.debug("rbytes: {}".format(rbytes))
+
+    rjs_2 = rbytes_2.decode("ascii")
+    logging.debug("rjs: {}".format(rjs_2))
+
+    rmsg_2 = json.loads(rjs_2)
+    logging.debug("rmsg: {}".format(rmsg_2))
+
+    logging.info("[*] Received: {}".format(rjs_2))
+    logging.info(" - opcode: {}".format(rmsg_2["opcode"]))
+    logging.info(" - type: {}".format(rmsg_2["type"]))
+    logging.info(" - encryption: {}".format(rmsg_2["encryption"]))
+    
+    decrypted_msg = decrypt(AES_key, rmsg_2["encryption"])
+    logging.info("[*] Decrypted: {}".format(decrypted_msg))
     
     conn.close()
 
