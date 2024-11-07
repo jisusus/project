@@ -83,7 +83,7 @@ def error_handler(rmsg,conn):
     elif not is_gen(g,p):
         error = "incorrect generator"
     else:
-        return
+        return False
     
     logging.info("[*] Error: {}".format(error))
     
@@ -102,6 +102,7 @@ def error_handler(rmsg,conn):
     logging.info("[*] Sent: {}".format(sjs))
 
     conn.close()
+    return True
     
 def run(addr, port):
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -111,7 +112,10 @@ def run(addr, port):
     init_msg(conn)
     rmsg = recieve_msg(conn)
 
-    error = error_handler(rmsg,conn)
+    if error_handler(rmsg,conn):
+        print(1)
+    else:
+        print(2)
 
     
 def command_line_args():
