@@ -25,7 +25,6 @@ def modular_inverse(e, phi_n):
         return x % phi_n
 
 def RSA_decrypte(encrypted_key, public, n):
-    # Factorize n to find p and q
     p, q = None, None
     for i in range(2, isqrt(n) + 1):
         if n % i == 0:
@@ -35,18 +34,15 @@ def RSA_decrypte(encrypted_key, public, n):
     if p is None or q is None:
         raise ValueError("Failed to factorize n into p and q.")
 
-    # Compute phi(n) and modular inverse of public key
     phi_n = (p - 1) * (q - 1)
     d = modular_inverse(public, phi_n)
     if d is None:
         raise ValueError("Failed to compute modular inverse of the public key.")
 
-    # Decrypt RSA encrypted key
     decrypted_key = [pow(c, d, n) for c in encrypted_key]
     return decrypted_key
 
 def AES_decrypte(encrypted_message, decrypted_key):
-    # Ensure decrypted_key is a byte array for AES decryption
     key = bytes(decrypted_key)
     encrypted_message_bytes = base64.b64decode(encrypted_message)
 
