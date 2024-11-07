@@ -90,9 +90,7 @@ def run(addr, port):
     
     a, alice_keypair = generate_DH_keypair(p, g)
     DH_shared_secret = (rmsg["public"] ** a) % p
-    DH_shared_secret.to_bytes(2, byteorder = "big")
-    AES_key = DH_shared_secret * 16
-    AES_key = DH_shared_secret.to_bytes(32, byteorder='big')
+    AES_key = DH_shared_secret.to_bytes(2, byteorder = "big") * 16
     
     smsg_1 = {}
     smsg_1["opcode"] = 1
@@ -122,8 +120,8 @@ def run(addr, port):
     logging.info(" - type: {}".format(rmsg_2["type"]))
     logging.info(" - encryption: {}".format(rmsg_2["encryption"]))
     
-    decrypted = decrypt(AES_key, base64.b64decode(rmsg_2["encryption"])).decode()
-    decrypted = decrypted[0:-ord(decrypted[-1])]
+    decrypted = decrypt(AES_key, base64.b64decode(rmsg_2["encryption"]))
+    decrypted = decrypted[0:decrypted[-1]].decode()
     logging.info("[*] Decrypted: {}".format(decrypted))
     
     smsg_2 = {}

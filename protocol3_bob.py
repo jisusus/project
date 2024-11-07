@@ -114,9 +114,7 @@ def handler(conn, msg):
     public_alice = rmsg_1["public"]
     DH_shared_secret = (public_alice ** b) % p
     
-    DH_shared_secret.to_bytes(2, byteorder = "big")
-    AES_key = DH_shared_secret * 16
-    AES_key = DH_shared_secret.to_bytes(32, byteorder='big')
+    AES_key = DH_shared_secret.to_bytes(2, byteorder = "big") * 16
     
     smsg_2 = {}
     smsg_2["opcode"] = 2
