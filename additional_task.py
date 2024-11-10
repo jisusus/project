@@ -43,7 +43,7 @@ def AES_decrypte(encrypted_message, decrypted_key):
     decrypted_message = []
     for key in decrypted_key:
         decrypted = decrypt(key, encrypted_message).decode()
-        decrypted = decrypted[0:-ord(decrypted[-1])]
+        # decrypted = decrypted[0:-ord(decrypted[-1])]
         decrypted_message.append(decrypted)
     return decrypted_message
 
@@ -74,7 +74,7 @@ def read_file(path):
                 print(f"Decrypted message = {decrypted_message}")
 
 def main():
-    current_path = "./project/adv_protocol_two.log"
+    current_path = "adv_protocol_two.log"
     read_file(current_path)
     
 if __name__ == "__main__":
