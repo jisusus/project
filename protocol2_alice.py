@@ -4,6 +4,7 @@ import logging
 import json
 import random
 import base64
+import time
 from Crypto.Cipher import AES
 
 BLOCK_SIZE = 16
@@ -27,6 +28,7 @@ def run(addr, port, msg):
     logging.info("Alice is connected to {}:{}".format(addr, port))
 
     random.seed(None)
+    logging.info("Initial message to send (from -m argument): {}".format(msg))
 
     # Step 1: Send RSA Key Request
     smsg_1 = {"opcode": 0, "type": "RSA"}
@@ -52,8 +54,9 @@ def run(addr, port, msg):
 
     # Step 3: Generate Symmetric Key and Encrypt with RSA Public Key
     symmetric_key = bytes([random.randint(0, 255) for _ in range(16)])
+    logging.info("Generated symmetric key before encryption: {}".format(symmetric_key))
+
     encrypted_key = [pow(byte, e, n) for byte in symmetric_key]
-    logging.info("[*] Generated symmetric key: {}".format(symmetric_key))
     logging.info("[*] Encrypted symmetric key: {}".format(encrypted_key))
 
     smsg_2 = {"opcode": 2, "type": "RSA", "encrypted_key": encrypted_key}
@@ -63,6 +66,13 @@ def run(addr, port, msg):
 
     # Step 4: Encrypt Message with Symmetric Key and Send to Bob
     encrypted_msg = encrypt(symmetric_key, msg)
+    logging.info("Message to encrypt: {}".format(msg))
+    logging.info(
+        "Encrypted message (AES): {}".format(
+            base64.b64encode(encrypted_msg).decode("utf-8")
+        )
+    )
+
     smsg_3 = {
         "opcode": 2,
         "type": "AES",
@@ -75,11 +85,18 @@ def run(addr, port, msg):
     # Step 5: Receive Response from Bob
     rbytes_2 = conn.recv(1024)
     rjs_2 = rbytes_2.decode("utf-8")
+    if not rjs_2:
+        logging.error("Received an empty response from Bob.")
+        conn.close()
+        return
+
     rmsg_2 = json.loads(rjs_2)
-    if rmsg_2["opcode"] == 2 and rmsg_2["type"] == "AES":
-        encrypted_response = base64.b64decode(rmsg_2["encryption"])
-        decrypted_response = decrypt(symmetric_key, encrypted_response)
-        logging.info("[*] Decrypted message from Bob: {}".format(decrypted_response))
+    logging.info("[*] Received message from Bob: {}".format(rmsg_2))
+
+    encrypted_response = base64.b64decode(rmsg_2["encryption"])
+    decrypted_response = decrypt(symmetric_key, encrypted_response).decode()
+    decrypted_response = decrypted_response[0 : -ord(decrypted_response[-1])]
+    logging.info("[*] Decrypted message from Bob: {}".format(decrypted_response))
 
     conn.close()
 
@@ -121,6 +138,7 @@ def main():
     args = command_line_args()
     log_level = args.log
     logging.basicConfig(level=log_level)
+    logging.info("[*] Message to send: {}".format(args.message))
 
     run(args.addr, args.port, args.message)
 
