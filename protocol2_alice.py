@@ -1,10 +1,10 @@
 import socket
+import threading
 import argparse
 import logging
 import json
 import random
 import base64
-import time
 from Crypto.Cipher import AES
 
 BLOCK_SIZE = 16
@@ -22,13 +22,63 @@ def decrypt(key, encrypted):
     return aes.decrypt(encrypted)
 
 
+def rsa_encrypt(message, e, n):
+    encrypted_message = [pow(byte, e, n) for byte in message]
+    return encrypted_message
+
+
+def rsa_decrypt(encrypted_message, d, n):
+    decrypted_message = bytes([pow(char, d, n) % 256 for char in encrypted_message])
+    return decrypted_message
+
+
+def extended_gcd(a, b):
+    if b == 0:
+        return a, 1, 0
+    else:
+        gcd, x1, y1 = extended_gcd(b, a % b)
+        x = y1
+        y = x1 - (a // b) * y1
+        return gcd, x, y
+
+
+def modular_inverse(e, phi_n):
+    gcd, x, _ = extended_gcd(e, phi_n)
+    if gcd != 1:
+        print("no multiplicative inverse")
+        return None
+    else:
+        return x % phi_n
+
+
+def RSA_decrypt(encrypted_key, public, n):
+    p, q = None, None
+    for i in range(2, n):
+        if n % i == 0:
+            p = i
+            q = n // i
+            break
+    if p is None or q is None:
+        raise ValueError("Failed to factorize n")
+    phi_n = (p - 1) * (q - 1)
+    d = modular_inverse(public, phi_n)
+
+    decrypted_key = rsa_decrypt(encrypted_key, d, n)
+    return decrypted_key
+
+
+def AES_decrypt(encrypted_message, decrypted_key):
+    decrypted = decrypt(decrypted_key, encrypted_message).decode()
+    pad = ord(decrypted[-1])
+    return decrypted[:-pad]
+
+
 def run(addr, port, msg):
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     conn.connect((addr, port))
     logging.info("Alice is connected to {}:{}".format(addr, port))
 
     random.seed(None)
-    logging.info("Initial message to send (from -m argument): {}".format(msg))
 
     # Step 1: Send RSA Key Request
     smsg_1 = {"opcode": 0, "type": "RSA"}
@@ -54,9 +104,8 @@ def run(addr, port, msg):
 
     # Step 3: Generate Symmetric Key and Encrypt with RSA Public Key
     symmetric_key = bytes([random.randint(0, 255) for _ in range(16)])
-    logging.info("Generated symmetric key before encryption: {}".format(symmetric_key))
-
-    encrypted_key = [pow(byte, e, n) for byte in symmetric_key]
+    encrypted_key = rsa_encrypt(symmetric_key, e, n)
+    logging.info("[*] Generated symmetric key: {}".format(symmetric_key))
     logging.info("[*] Encrypted symmetric key: {}".format(encrypted_key))
 
     smsg_2 = {"opcode": 2, "type": "RSA", "encrypted_key": encrypted_key}
@@ -66,13 +115,6 @@ def run(addr, port, msg):
 
     # Step 4: Encrypt Message with Symmetric Key and Send to Bob
     encrypted_msg = encrypt(symmetric_key, msg)
-    logging.info("Message to encrypt: {}".format(msg))
-    logging.info(
-        "Encrypted message (AES): {}".format(
-            base64.b64encode(encrypted_msg).decode("utf-8")
-        )
-    )
-
     smsg_3 = {
         "opcode": 2,
         "type": "AES",
@@ -85,17 +127,9 @@ def run(addr, port, msg):
     # Step 5: Receive Response from Bob
     rbytes_2 = conn.recv(1024)
     rjs_2 = rbytes_2.decode("utf-8")
-    if not rjs_2:
-        logging.error("Received an empty response from Bob.")
-        conn.close()
-        return
-
     rmsg_2 = json.loads(rjs_2)
-    logging.info("[*] Received message from Bob: {}".format(rmsg_2))
-
     encrypted_response = base64.b64decode(rmsg_2["encryption"])
-    decrypted_response = decrypt(symmetric_key, encrypted_response).decode()
-    decrypted_response = decrypted_response[0 : -ord(decrypted_response[-1])]
+    decrypted_response = AES_decrypt(encrypted_response, symmetric_key)
     logging.info("[*] Decrypted message from Bob: {}".format(decrypted_response))
 
     conn.close()
@@ -138,7 +172,6 @@ def main():
     args = command_line_args()
     log_level = args.log
     logging.basicConfig(level=log_level)
-    logging.info("[*] Message to send: {}".format(args.message))
 
     run(args.addr, args.port, args.message)
 
