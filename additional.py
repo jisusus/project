@@ -3,7 +3,6 @@ from math import isqrt
 import base64
 from Cryptodome.Cipher import AES
 
-
 def decrypt(key, encrypted):
     aes = AES.new(key, AES.MODE_ECB)
     return aes.decrypt(encrypted)
@@ -20,39 +19,42 @@ def extended_gcd(a, b):
 def modular_inverse(e, phi_n):
     gcd, x, _ = extended_gcd(e, phi_n)
     if gcd != 1:
-        print("no multiplicative inverse")
+        print("No multiplicative inverse exists.")
         return None
     else:
         return x % phi_n
 
-def RSA_decrypte(encrypted_key, public, n, type):
+def RSA_decrypte(encrypted_key, public, n):
+    p, q = None, None
     for i in range(2, isqrt(n) + 1):
         if n % i == 0:
-            p = i 
+            p = i
             q = n // i
+            break
+    if p is None or q is None:
+        raise ValueError("Failed to factorize n into p and q.")
+
     phi_n = (p - 1) * (q - 1)
     d = modular_inverse(public, phi_n)
+    if d is None:
+        raise ValueError("Failed to compute modular inverse of the public key.")
 
-    decrypted_key = []
-
-    for c in encrypted_key:
-        decrypted_key.append(c**d % n)
-
+    decrypted_key = [pow(c, d, n) for c in encrypted_key]
     return decrypted_key
 
 def AES_decrypte(encrypted_message, decrypted_key):
-    decrypted_message = []
-    for key in decrypted_key:
-        decrypted = decrypt(key, encrypted_message).decode()
-        # decrypted = decrypted[0:-ord(decrypted[-1])]
-        decrypted_message.append(decrypted)
-    return decrypted_message
+    key = bytes(decrypted_key)
+    encrypted_message_bytes = base64.b64decode(encrypted_message)
 
-
+    decrypted = decrypt(key, encrypted_message_bytes)
+    padding_length = decrypted[-1]
+    return decrypted[:-padding_length]
 
 def read_file(path):
     with open(path, 'r') as log_file:
         log_data = log_file.readlines()
+
+    public, n, decrypted_key = None, None, None
 
     for line in log_data:
         log = json.loads(line.strip())
@@ -60,23 +62,22 @@ def read_file(path):
         if log["opcode"] == 1:
             public = log["public"]
             n = log["parameter"]["n"]
-            print(public, n)
+            print("Public key and modulus received:", public, n)
 
         if log["opcode"] == 2:
-            type = log["type"]
-            if type == "RSA":
+            if log["type"] == "RSA":
                 encrypted_key = log["encrypted_key"]
-                decrypted_key = RSA_decrypte(encrypted_key, public, n, type)
-                print(decrypted_key)
-            elif type == "AES":
+                decrypted_key = RSA_decrypte(encrypted_key, public, n)
+                print("Decrypted RSA key:", decrypted_key)
+
+            elif log["type"] == "AES" and decrypted_key is not None:
                 encrypted_message_base64 = log["encryption"]
-                encrypted_message = base64.b64decode(encrypted_message_base64)
-                decrypted_message = AES_decrypte(encrypted_message, decrypted_key)
-                print(f"Decrypted message = {decrypted_message}")
+                decrypted_message = AES_decrypte(encrypted_message_base64, decrypted_key)
+                print("Decrypted AES message:", decrypted_message.decode('utf-8'))
 
 def main():
-    current_path = "adv_protocol_two.log"
+    current_path = "./project/adv_protocol_two.log"
     read_file(current_path)
-    
+
 if __name__ == "__main__":
     main()
