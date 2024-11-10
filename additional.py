@@ -39,7 +39,14 @@ def RSA_decrypte(encrypted_key, public, n):
     if d is None:
         raise ValueError("Failed to compute modular inverse of the public key.")
 
-    decrypted_key = [pow(c, d, n) for c in encrypted_key]
+    # decrypted_key = [pow(c, d, n) for c in encrypted_key]
+    # return decrypted_key
+
+    decrypted_key = []
+
+    for c in encrypted_key:
+        decrypted_key.append(c**d % n)
+
     return decrypted_key
 
 def AES_decrypte(encrypted_message, decrypted_key):

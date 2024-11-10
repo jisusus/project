@@ -19,7 +19,7 @@ def verify_p_q(data):
     if not (is_prime_number(p) and is_prime_number(q)):
         print("p 또는 q가 소수가 아닙니다.")
         return False
-    return True
+    else: print("p q는 소수가 맞습니다.")
 
 def verify_RSA_Keypair(data):
     p = data["parameter"]["p"]
@@ -36,10 +36,9 @@ def verify_RSA_Keypair(data):
     # (e * d) % phi = 1을 만족하는지 확인
     if (e * d) % phi != 1:
         print("RSA 키 쌍이 올바르지 않습니다.")
-        return False
-
-    print("RSA 키 쌍이 유효합니다.")
-    print(f"Public Key: {public_key}, Private Key: {private_key}")
+    else:
+        print("RSA 키 쌍이 유효합니다.")
+        print(f"Public Key: {public_key}, Private Key: {private_key}")
 
 def run(addr, port):
     conn = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -83,8 +82,7 @@ def run(addr, port):
     logging.info("   - p: {}".format(rmsg["parameter"]["p"]))
     logging.info("   - q: {}".format(rmsg["parameter"]["q"]))
 
-    correct_pq = verify_p_q(rmsg)
-    print(f"p and q are {correct_pq}")
+    verify_p_q(rmsg)
 
     verify_RSA_Keypair(rmsg)
 
