@@ -7,11 +7,13 @@ import random
 import base64
 import random
 
+
 def is_prime_number(x):
     for i in range(2, x):
         if x % i == 0:
             return False
     return True
+
 
 def make_prime_number(a, b):
     p = random.randrange(a, b)
@@ -19,10 +21,11 @@ def make_prime_number(a, b):
         return p
     else:
         return make_prime_number(a, b)
-    
+
+
 def mod(a, b):
-    if a<0 and b<0:
-        q = - (a // -b)
+    if a < 0 and b < 0:
+        q = -(a // -b)
         r = a - (b * q)
     elif b == 0:
         print("Please enter non-zero at b")
@@ -31,27 +34,30 @@ def mod(a, b):
         r = a % b
     return q, r
 
+
 def multiplicative_inverse(a, b):
     y0 = 0
     y1 = 1
     r = 1
-    a = a 
+    a = a
     b = b
-    
+
     while r != 0:
         q, r = mod(a, b)
-        y = y0 - y1*q
+        y = y0 - y1 * q
         y0 = y1
         y1 = y
         a = b
-        b = r    
+        b = r
     return y0
+
 
 def make_mulitiplicative_inverse(a, b):
     y = multiplicative_inverse(a, b)
     while y < 0:
         y += a
     return y
+
 
 def gcd(a, b):
     if b == 0:
@@ -61,17 +67,18 @@ def gcd(a, b):
     else:
         return gcd(b, a % b)
 
+
 def make_random_relatively_prime(a):
-    b = random.randrange(400, 500)
+    b = random.randrange(20000, 30000)
     if gcd(a, b) == 1:
         return b
     else:
         return make_random_relatively_prime(a)
-    
+
+
 def generate_rsa_keypair():
-    # p와 q는 400과 500 사이의 소수로 설정
-    p = make_prime_number(400, 500)
-    q = make_prime_number(400, 500)
+    p = make_prime_number(20000, 30000)
+    q = make_prime_number(20000, 30000)
 
     # RSA 키 쌍 생성
     n = p * q
@@ -88,9 +95,10 @@ def generate_rsa_keypair():
         "type": "RSAKey",
         "private": private_key,
         "public": public_key,
-        "parameter": {"p": p, "q": q}
+        "parameter": {"p": p, "q": q},
     }
     return data
+
 
 def handler(conn):
     random.seed(None)
@@ -110,7 +118,7 @@ def handler(conn):
 
     rsa = generate_rsa_keypair()
     logging.debug("rsa: {}".format(rsa))
-    
+
     sjs = json.dumps(rsa)
     logging.debug("sjs: {}".format(sjs))
 
@@ -122,6 +130,7 @@ def handler(conn):
 
     conn.close()
 
+
 def run(addr, port):
     bob = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     bob.bind((addr, port))
@@ -132,19 +141,44 @@ def run(addr, port):
     while True:
         conn, info = bob.accept()
 
-        logging.info("[*] Bob accepts the connection from {}:{}".format(info[0], info[1]))
+        logging.info(
+            "[*] Bob accepts the connection from {}:{}".format(info[0], info[1])
+        )
 
         conn_handle = threading.Thread(target=handler, args=(conn,))
         conn_handle.start()
         conn_handle.join()
 
+
 def command_line_args():
     parser = argparse.ArgumentParser()
-    parser.add_argument("-a", "--addr", metavar="<bob's IP address>", help="Bob's IP address", type=str, default="0.0.0.0")
-    parser.add_argument("-p", "--port", metavar="<bob's open port>", help="Bob's port", type=int, required=True)
-    parser.add_argument("-l", "--log", metavar="<log level (DEBUG/INFO/WARNING/ERROR/CRITICAL)>", help="Log level (DEBUG/INFO/WARNING/ERROR/CRITICAL)", type=str, default="INFO")
+    parser.add_argument(
+        "-a",
+        "--addr",
+        metavar="<bob's IP address>",
+        help="Bob's IP address",
+        type=str,
+        default="0.0.0.0",
+    )
+    parser.add_argument(
+        "-p",
+        "--port",
+        metavar="<bob's open port>",
+        help="Bob's port",
+        type=int,
+        required=True,
+    )
+    parser.add_argument(
+        "-l",
+        "--log",
+        metavar="<log level (DEBUG/INFO/WARNING/ERROR/CRITICAL)>",
+        help="Log level (DEBUG/INFO/WARNING/ERROR/CRITICAL)",
+        type=str,
+        default="INFO",
+    )
     args = parser.parse_args()
     return args
+
 
 def main():
     args = command_line_args()
@@ -152,6 +186,7 @@ def main():
     logging.basicConfig(level=log_level)
 
     run(args.addr, args.port)
+
 
 if __name__ == "__main__":
     main()
