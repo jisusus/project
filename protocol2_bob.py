@@ -17,11 +17,6 @@ def encrypt(key, msg):
     return aes.encrypt(msg.encode())
 
 
-def decrypt(key, encrypted):
-    aes = AES.new(key, AES.MODE_ECB)
-    return aes.decrypt(encrypted)
-
-
 def rsa_encrypt(message, e, n):
     encrypted_message = [pow(ord(char), e, n) for char in message]
     return encrypted_message
