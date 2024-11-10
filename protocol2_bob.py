@@ -5,13 +5,15 @@ import logging
 import json
 import random
 import base64
+import time
+from math import isqrt
 from Crypto.Cipher import AES
 
 BLOCK_SIZE = 16
 
 
 def encrypt(key, msg):
-    pad = BLOCK_SIZE - len(msg) % BLOCK_SIZE
+    pad = BLOCK_SIZE - len(msg)
     msg = msg + pad * chr(pad)
     aes = AES.new(key, AES.MODE_ECB)
     return aes.encrypt(msg.encode())
@@ -22,14 +24,61 @@ def decrypt(key, encrypted):
     return aes.decrypt(encrypted)
 
 
-def rsa_encrypt(message, e, n):
-    encrypted_message = [pow(ord(char), e, n) for char in message]
-    return encrypted_message
+def extended_gcd(a, b):
+    if b == 0:
+        return a, 1, 0
+    else:
+        gcd, x1, y1 = extended_gcd(b, a % b)
+        x = y1
+        y = x1 - (a // b) * y1
+        return gcd, x, y
 
 
-def rsa_decrypt(encrypted_message, d, n):
-    decrypted_message = bytes([pow(char, d, n) for char in encrypted_message])
+def modular_inverse(e, phi_n):
+    gcd, x, _ = extended_gcd(e, phi_n)
+    if gcd != 1:
+        print("no multiplicative inverse")
+        return None
+    else:
+        return x % phi_n
+
+
+def RSA_decrypt(encrypted_key, public, n):
+    for i in range(2, isqrt(n) + 1):
+        if n % i == 0:
+            p = i
+            q = n // i
+    phi_n = (p - 1) * (q - 1)
+    d = modular_inverse(public, phi_n)
+
+    decrypted_key = []
+
+    for c in encrypted_key:
+        decrypted_key.append(c**d % n)
+
+    return decrypted_key
+
+
+def AES_decrypt(encrypted_message, decrypted_key):
+    decrypted_message = []
+    for key in decrypted_key:
+        decrypted = decrypt(key, encrypted_message).decode()
+        # decrypted = decrypted[0:-ord(decrypted[-1])]
+        decrypted_message.append(decrypted)
     return decrypted_message
+
+
+def gcd(a, b):
+    while b != 0:
+        a, b = b, a % b
+    return a
+
+
+def make_random_relatively_prime(a):
+    b = random.randrange(400, 500)
+    while gcd(a, b) != 1:
+        b = random.randrange(400, 500)
+    return b
 
 
 def is_prime_number(x):
@@ -56,67 +105,6 @@ def make_mulitiplicative_inverse(a, b):
     return y0 + a if y0 < 0 else y0
 
 
-def gcd(a, b):
-    while b != 0:
-        a, b = b, a % b
-    return a
-
-
-def extended_gcd(a, b):
-    if b == 0:
-        return a, 1, 0
-    else:
-        gcd, x1, y1 = extended_gcd(b, a % b)
-        x = y1
-        y = x1 - (a // b) * y1
-        return gcd, x, y
-
-
-def modular_inverse(e, phi_n):
-    gcd, x, _ = extended_gcd(e, phi_n)
-    if gcd != 1:
-        print("no multiplicative inverse")
-        return None
-    else:
-        return x % phi_n
-
-
-def RSA_decrypt(encrypted_key, public, n, type):
-    p, q = None, None
-    for i in range(2, n):
-        if n % i == 0:
-            p = i
-            q = n // i
-            break
-    if p is None or q is None:
-        raise ValueError("Failed to factorize n")
-    phi_n = (p - 1) * (q - 1)
-    d = modular_inverse(public, phi_n)
-
-    decrypted_key = []
-
-    for c in encrypted_key:
-        decrypted_key.append(c**d % n)
-
-    return decrypted_key
-
-
-def AES_decrypt(encrypted_message, decrypted_key):
-    decrypted_message = []
-    for key in decrypted_key:
-        decrypted = decrypt(key, encrypted_message).decode()
-        decrypted = decrypted[0 : -ord(decrypted[-1])]
-        decrypted_message.append(decrypted)
-    return decrypted_message
-
-
-def make_random_relatively_prime(a):
-    b = random.randrange(400, 500)
-    while gcd(a, b) != 1:
-        b = random.randrange(400, 500)
-    return b
-
-
 def generate_rsa_keypair():
     p = make_prime_number(400, 500)
     q = make_prime_number(400, 500)
@@ -134,83 +122,169 @@ def generate_rsa_keypair():
     return data
 
 
-rsa_keys = None
-
-
 def handler(conn, msg):
-    global rsa_keys
     random.seed(None)
+    rsa_keypair = None
+    symmetric_key = None
 
-    try:
-        # Step 1: Receive RSA Key Request from Alice
-        rbytes = conn.recv(1024)
-        if not rbytes:
-            logging.error("Received an empty response.")
-            conn.close()
-            return
-        rjs = rbytes.decode("ascii")
-        rmsg = json.loads(rjs)
+    while True:
+        try:
+            rbytes = conn.recv(1024)
+            if not rbytes:
+                break
 
-        if rmsg["opcode"] == 0 and rmsg["type"] == "RSA":
-            # Step 2: Generate and Send RSA Key Pair
-            rsa_keys = generate_rsa_keypair()
-            e = rsa_keys["public"]
-            d = rsa_keys["private"]
-            n = rsa_keys["parameter"]["n"]
-            smsg = {"opcode": 1, "type": "RSA", "public": e, "parameter": {"n": n}}
-            sjs = json.dumps(smsg)
-            conn.send(sjs.encode("ascii"))
-            logging.info("[*] Sent RSA public key (e={}, n={}) to Alice".format(e, n))
+            logging.debug("rbytes: {}".format(rbytes))
+            rjs = rbytes.decode("utf-8")
+            logging.debug("rjs: {}".format(rjs))
+            rmsg = json.loads(rjs)
+            logging.debug("rmsg: {}".format(rmsg))
 
-        # Step 3: Receive Encrypted Symmetric Key
-        rbytes_2 = conn.recv(1024)
-        rjs_2 = rbytes_2.decode("ascii")
-        rmsg_2 = json.loads(rjs_2)
-        encrypted_key = rmsg_2["encrypted_key"]
-        symmetric_key = rsa_decrypt(encrypted_key, d, n)
-        logging.info("[*] Decrypted symmetric key: {}".format(symmetric_key))
+            logging.info("[*] Received: {}".format(rjs))
 
-        # Step 4: Receive AES-encrypted message from Alice
-        rbytes_3 = conn.recv(1024)
-        rjs_3 = rbytes_3.decode("ascii")
-        rmsg_3 = json.loads(rjs_3)
-        encrypted_msg = base64.b64decode(rmsg_3["encryption"])
-        decrypted_msg = decrypt(symmetric_key, encrypted_msg)
-        logging.info("[*] Decrypted message from Alice: {}".format(decrypted_msg))
+            if rmsg["opcode"] == 0 and rmsg["type"] == "RSA":
+                rsa_keypair = generate_rsa_keypair()
+                e = rsa_keypair["public"]
+                n = rsa_keypair["parameter"]["n"]
+                smsg_1 = {
+                    "opcode": 1,
+                    "type": "RSA",
+                    "public": e,
+                    "parameter": {"n": n},
+                }
+                logging.debug("smsg_1: {}".format(smsg_1))
+                sjs_1 = json.dumps(smsg_1)
+                logging.debug("sjs_1: {}".format(sjs_1))
+                sbytes_1 = sjs_1.encode("utf-8")
+                logging.debug("sbytes_1: {}".format(sbytes_1))
+                conn.send(sbytes_1)
+                logging.info(
+                    "[*] Sent RSA public key (e={}, n={}) to Alice".format(e, n)
+                )
 
-        # Step 5: Send Response to Alice
-        response_msg = "Message received: {}".format(decrypted_msg.decode("utf-8"))
-        encrypted_response = encrypt(symmetric_key, response_msg)
-        smsg_4 = {
-            "opcode": 2,
-            "type": "AES",
-            "encryption": base64.b64encode(encrypted_response).decode("utf-8"),
-        }
-        sjs_4 = json.dumps(smsg_4)
-        conn.send(sjs_4.encode("ascii"))
-        logging.info("[*] Sent response to Alice: {}".format(sjs_4))
+            elif rmsg["opcode"] == 2 and rmsg["type"] == "RSA":
+                encrypted_key = rmsg["encrypted_key"]
+                d = rsa_keypair["private"]
+                n = rsa_keypair["parameter"]["n"]
+                symmetric_key = RSA_decrypt(encrypted_key, d, n)
+                logging.info("[*] Decrypted symmetric key: {}".format(symmetric_key))
 
-    except Exception as e:
-        logging.error(f"An error occurred: {e}")
+            elif rmsg["opcode"] == 2 and rmsg["type"] == "AES":
+                encrypted_msg_2 = base64.b64decode(rmsg["encryption"])
+                decrypted_msg_2 = decrypt(symmetric_key, encrypted_msg_2).decode(
+                    "utf-8"
+                )
+                decrypted_msg_2 = decrypted_msg_2[0 : -ord(decrypted_msg_2[-1])]
+                logging.info(
+                    "[*] Decrypted message from Alice: {}".format(decrypted_msg_2)
+                )
 
-    finally:
-        conn.close()
-        logging.info("[*] Connection closed to Alice.")
+                response_message = msg
+                encrypted_response = encrypt(symmetric_key, response_message)
+                encrypted_response = base64.b64encode(encrypted_response).decode(
+                    "utf-8"
+                )
+
+                smsg_2 = {
+                    "opcode": 2,
+                    "type": "AES",
+                    "encryption": encrypted_response,
+                }
+                logging.debug("smsg_2: {}".format(smsg_2))
+                sjs_2 = json.dumps(smsg_2)
+                logging.debug("sjs_2: {}".format(sjs_2))
+                sbytes_2 = sjs_2.encode("utf-8")
+                logging.debug("sbytes_2: {}".format(sbytes_2))
+                conn.send(sbytes_2)
+                logging.info("[*] Sent encrypted response: {}".format(sjs_2))
+
+        except socket.error as e:
+            logging.error(f"Socket error occurred: {e}")
+            break
+
+    conn.close()
+    logging.info("[*] Connection closed.")
+
+    # rbytes = conn.recv(1024)
+    # logging.debug("rbytes: {}".format(rbytes))
+    # rjs = rbytes.decode("ascii")
+    # logging.debug("rjs: {}".format(rjs))
+    # rmsg = json.loads(rjs)
+    # logging.debug("rmsg: {}".format(rmsg))
+
+    # logging.info("[*] Received: {}".format(rjs))
+
+    # if rmsg["opcode"] == 0 and rmsg["type"] == "RSA":
+    #     key = generate_rsa_keypair()
+    #     e = key["public"]
+    #     d = key["private"]
+    #     n = key["parameter"]["n"]
+    #     smsg_1 = {"opcode": 1, "type": "RSA", "public": e, "parameter": {"n": n}}
+    #     logging.debug("smsg_1: {}".format(smsg_1))
+    #     sjs_1 = json.dumps(smsg_1)
+    #     logging.debug("sjs_1: {}".format(sjs_1))
+    #     sbytes_1 = sjs_1.encode("ascii")
+    #     logging.debug("sbytes_1: {}".format(sbytes_1))
+    #     conn.send(sbytes_1)
+    #     logging.info("[*] Sent RSA public key (e={}, n={}) to Alice".format(e, n))
+
+    #     time.sleep(1)
+
+    # elif rmsg["opcode"] == 2 and rmsg["type"] == "RSA":
+    #     encrypted_key = rmsg["encrypted_key"]
+    #     symmetric_key = RSA_decrypt(encrypted_key, e, n)
+    #     logging.info("[*] Decrypted symmetric key: {}".format(symmetric_key))
+
+    #     encrypted_msg = encrypt(symmetric_key, msg)
+    #     encrypted_msg = base64.b64encode(encrypted_msg)
+
+    #     smsg_2 = {
+    #         "opcode": 2,
+    #         "type": "AES",
+    #         "encryption": encrypted_msg,
+    #     }
+    #     logging.debug("smsg_2: {}".format(smsg_2))
+    #     sjs_2 = json.dumps(smsg_2)
+    #     logging.debug("sjs_2: {}".format(sjs_2))
+    #     sbytes_2 = sjs_2.encode("ascii")
+    #     logging.debug("sbytes_2: {}".format(sbytes_2))
+    #     conn.send(sbytes_2)
+    #     logging.info("[*] Sent encrypted response: {}".format(sjs_2))
+
+    #     time.sleep(1)
+
+    # elif rmsg["opcode"] == 2 and rmsg["type"] == "AES":
+
+    #     encrypted_msg_2 = base64.b64decode(rmsg["encryption"])
+    #     decrypted_msg_2 = decrypt(symmetric_key, encrypted_msg_2)
+    #     logging.info("[*] Decrypted message from Alice: {}".format(decrypted_msg_2))
+
+    # conn.close()
+    # logging.info("[*] Connection closed.")
 
 
 def run(addr, port, msg):
     bob = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     bob.bind((addr, port))
+
     bob.listen(10)
     logging.info("[*] Bob is listening on {}:{}".format(addr, port))
 
     while True:
         conn, info = bob.accept()
+
         logging.info(
             "[*] Bob accepts the connection from {}:{}".format(info[0], info[1])
         )
-        conn_handle = threading.Thread(target=handler, args=(conn, msg))
+
+        conn_handle = threading.Thread(
+            target=handler,
+            args=(
+                conn,
+                msg,
+            ),
+        )
         conn_handle.start()
+        conn_handle.join()
 
 
 def command_line_args():
@@ -242,13 +316,15 @@ def command_line_args():
         type=str,
         default="INFO",
     )
-    return parser.parse_args()
+    args = parser.parse_args()
+    return args
 
 
 def main():
     args = command_line_args()
     log_level = args.log
     logging.basicConfig(level=log_level)
+
     run(args.addr, args.port, args.message)
 
 
