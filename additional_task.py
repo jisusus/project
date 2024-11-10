@@ -1,7 +1,7 @@
 import json
 from math import isqrt
 import base64
-from Cryptodome.Cipher import AES
+from Crypto.Cipher import AES
 
 
 def decrypt(key, encrypted):

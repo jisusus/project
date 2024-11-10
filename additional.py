@@ -1,7 +1,7 @@
 import json
 from math import isqrt
 import base64
-from Cryptodome.Cipher import AES
+from Crypto.Cipher import AES
 
 def decrypt(key, encrypted):
     aes = AES.new(key, AES.MODE_ECB)
@@ -73,10 +73,10 @@ def read_file(path):
             elif log["type"] == "AES" and decrypted_key is not None:
                 encrypted_message_base64 = log["encryption"]
                 decrypted_message = AES_decrypte(encrypted_message_base64, decrypted_key)
-                print("Decrypted AES message:", decrypted_message.decode('utf-8'))
+                print("Decrypted AES message:", decrypted_message.decode())
 
 def main():
-    current_path = "./project/adv_protocol_two.log"
+    current_path = input()
     read_file(current_path)
 
 if __name__ == "__main__":
