@@ -110,8 +110,14 @@ def generate_rsa_keypair():
     q = make_prime_number(400, 500)
     n = p * q
     phi = (p - 1) * (q - 1)
+
     e = make_random_relatively_prime(phi)
-    d = make_mulitiplicative_inverse(phi, e)
+    d = modular_inverse(e, phi)
+
+    while d is None:
+        e = make_random_relatively_prime(phi)
+        d = modular_inverse(e, phi)
+
     data = {
         "opcode": 1,
         "type": "RSA",
@@ -165,8 +171,23 @@ def handler(conn, msg):
                 encrypted_key = rmsg["encrypted_key"]
                 d = rsa_keypair["private"]
                 n = rsa_keypair["parameter"]["n"]
-                symmetric_key = RSA_decrypt(encrypted_key, d, n)
+                symmetric_key = bytes(RSA_decrypt(encrypted_key, e, n))
                 logging.info("[*] Decrypted symmetric key: {}".format(symmetric_key))
+                encrypted_msg = encrypt(symmetric_key, msg)
+                encrypted_msg = base64.b64decode()(encrypted_msg)
+                smsg_2 = {
+                    "opcode": 2,
+                    "type": "AES",
+                    "encryption": encrypted_msg,
+                }
+                logging.debug("smsg_2: {}".format(smsg_2))
+                sjs_2 = json.dumps(smsg_2)
+                logging.debug("sjs_2: {}".format(sjs_2))
+                sbytes_2 = sjs_2.encode("ascii")
+                logging.debug("sbytes_2: {}".format(sbytes_2))
+                conn.send(sbytes_2)
+                logging.info("[*] Sent encrypted response: {}".format(sjs_2))
+                time.sleep(1)
 
             elif rmsg["opcode"] == 2 and rmsg["type"] == "AES":
                 encrypted_msg_2 = base64.b64decode(rmsg["encryption"])
@@ -204,16 +225,16 @@ def handler(conn, msg):
     conn.close()
     logging.info("[*] Connection closed.")
 
-    # rbytes = conn.recv(1024)
-    # logging.debug("rbytes: {}".format(rbytes))
-    # rjs = rbytes.decode("ascii")
-    # logging.debug("rjs: {}".format(rjs))
-    # rmsg = json.loads(rjs)
-    # logging.debug("rmsg: {}".format(rmsg))
+    # rbytes_1 = conn.recv(1024)
+    # logging.debug("rbytes_1: {}".format(rbytes_1))
+    # rjs_1 = rbytes_1.decode("ascii")
+    # logging.debug("rjs_1: {}".format(rjs_1))
+    # rmsg_1 = json.loads(rjs_1)
+    # logging.debug("rmsg_1: {}".format(rmsg_1))
 
-    # logging.info("[*] Received: {}".format(rjs))
+    # logging.info("[*] Received: {}".format(rjs_1))
 
-    # if rmsg["opcode"] == 0 and rmsg["type"] == "RSA":
+    # if rmsg_1["opcode"] == 0 and rmsg_1["type"] == "RSA":
     #     key = generate_rsa_keypair()
     #     e = key["public"]
     #     d = key["private"]
@@ -222,41 +243,57 @@ def handler(conn, msg):
     #     logging.debug("smsg_1: {}".format(smsg_1))
     #     sjs_1 = json.dumps(smsg_1)
     #     logging.debug("sjs_1: {}".format(sjs_1))
-    #     sbytes_1 = sjs_1.encode("ascii")
+    #     sbytes_1 = sjs_1.encode("utf-8")
     #     logging.debug("sbytes_1: {}".format(sbytes_1))
     #     conn.send(sbytes_1)
     #     logging.info("[*] Sent RSA public key (e={}, n={}) to Alice".format(e, n))
 
     #     time.sleep(1)
+    # elif "rbytes_2" in locals():
+    #     rmsg_2 = json.loads(rbytes_2.decode("utf-8"))
+    #     if rmsg_2["opcode"] == 2 and rmsg_2["type"] == "RSA":
+    #         rbytes_2 = conn.recv(1024)
+    #         logging.debug("rbytes_2: {}".format(rbytes_2))
+    #         rjs_2 = rbytes_2.decode("utf-8")
+    #         logging.debug("rjs_2: {}".format(rjs_2))
+    #         rmsg_2 = json.loads(rjs_2)
+    #         logging.debug("rmsg_2: {}".format(rmsg_2))
 
-    # elif rmsg["opcode"] == 2 and rmsg["type"] == "RSA":
-    #     encrypted_key = rmsg["encrypted_key"]
-    #     symmetric_key = RSA_decrypt(encrypted_key, e, n)
-    #     logging.info("[*] Decrypted symmetric key: {}".format(symmetric_key))
+    #         # elif rmsg_2["opcode"] == 2 and rmsg_2["type"] == "RSA":
+    #         encrypted_key = rmsg_2["encrypted_key"]
+    #         symmetric_key = bytes(RSA_decrypt(encrypted_key, e, n))
+    #         logging.info("[*] Decrypted symmetric key: {}".format(symmetric_key))
 
-    #     encrypted_msg = encrypt(symmetric_key, msg)
-    #     encrypted_msg = base64.b64encode(encrypted_msg)
+    #         encrypted_msg = encrypt(symmetric_key, msg)
+    #         encrypted_msg = base64.b64encode(encrypted_msg)
 
-    #     smsg_2 = {
-    #         "opcode": 2,
-    #         "type": "AES",
-    #         "encryption": encrypted_msg,
-    #     }
-    #     logging.debug("smsg_2: {}".format(smsg_2))
-    #     sjs_2 = json.dumps(smsg_2)
-    #     logging.debug("sjs_2: {}".format(sjs_2))
-    #     sbytes_2 = sjs_2.encode("ascii")
-    #     logging.debug("sbytes_2: {}".format(sbytes_2))
-    #     conn.send(sbytes_2)
-    #     logging.info("[*] Sent encrypted response: {}".format(sjs_2))
+    #         smsg_2 = {
+    #             "opcode": 2,
+    #             "type": "AES",
+    #             "encryption": encrypted_msg,
+    #         }
+    #         logging.debug("smsg_2: {}".format(smsg_2))
+    #         sjs_2 = json.dumps(smsg_2)
+    #         logging.debug("sjs_2: {}".format(sjs_2))
+    #         sbytes_2 = sjs_2.encode("utf-8")
+    #         logging.debug("sbytes_2: {}".format(sbytes_2))
+    #         conn.send(sbytes_2)
+    #         logging.info("[*] Sent encrypted response: {}".format(sjs_2))
 
-    #     time.sleep(1)
-
-    # elif rmsg["opcode"] == 2 and rmsg["type"] == "AES":
-
-    #     encrypted_msg_2 = base64.b64decode(rmsg["encryption"])
-    #     decrypted_msg_2 = decrypt(symmetric_key, encrypted_msg_2)
-    #     logging.info("[*] Decrypted message from Alice: {}".format(decrypted_msg_2))
+    #         time.sleep(1)
+    #         rbytes_3 = conn.recv(1024)
+    #         logging.debug("rbytes_3: {}".format(rbytes_3))
+    #         rjs_3 = rbytes_3.decode("utf-8")
+    #         logging.debug("rjs_3: {}".format(rjs_3))
+    #         rmsg_3 = json.loads(rjs_3)
+    #         logging.debug("rmsg_3: {}".format(rmsg_3))
+    # elif "rbytes_3" in locals():
+    #     rmsg_3 = json.loads(rbytes_3.decode("utf-8"))
+    #     # elif rmsg_3["opcode"] == 2 and rmsg_3["type"] == "AES":
+    #     if rmsg_3["opcode"] == 2 and rmsg_3["type"] == "AES":
+    #         encrypted_msg_2 = base64.b64decode(rmsg_3["encryption"])
+    #         decrypted_msg_2 = decrypt(symmetric_key, encrypted_msg_2)
+    #         logging.info("[*] Decrypted message from Alice: {}".format(decrypted_msg_2))
 
     # conn.close()
     # logging.info("[*] Connection closed.")

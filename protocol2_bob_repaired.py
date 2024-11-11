@@ -16,32 +16,38 @@ def encrypt(key, msg):
     aes = AES.new(key, AES.MODE_ECB)
     return aes.encrypt(msg.encode())
 
+
 def decrypt(key, encrypted):
     aes = AES.new(key, AES.MODE_ECB)
     return aes.decrypt(encrypted)
+
 
 def rsa_encrypt(message, e, n):
     encrypted_message = [pow(ord(char), e, n) for char in message]
     return encrypted_message
 
+
 def rsa_decrypt(encrypted_message, d, n):
     decrypted_message = bytes([pow(char, d, n) for char in encrypted_message])
     return decrypted_message
 
+
 def generate_rsa_keypair():
-    p = make_prime_number(200, 300)
-    q = make_prime_number(200, 300)
+    p = make_prime_number(400, 500)
+    q = make_prime_number(400, 500)
     n = p * q
     phi = (p - 1) * (q - 1)
     e = make_random_relatively_prime(phi)
-    d = make_mulitiplicative_inverse(phi,e)
+    d = make_mulitiplicative_inverse(phi, e)
     return {"public": e, "private": d, "parameter": {"n": n}, "prime": {"p": p, "q": q}}
+
 
 def is_prime_number(x):
     for i in range(2, x):
         if x % i == 0:
             return False
     return True
+
 
 def make_prime_number(a, b):
     p = random.randrange(a, b)
@@ -50,17 +56,20 @@ def make_prime_number(a, b):
     else:
         return make_prime_number(a, b)
 
+
 def make_random_relatively_prime(a):
-    b = random.randrange(200, 300)
+    b = random.randrange(400, 500)
     if gcd(a, b) == 1:
         return b
     else:
         return make_random_relatively_prime(a)
 
+
 def gcd(a, b):
     while b != 0:
         a, b = b, a % b
     return a
+
 
 def mod(a, b):
     if a < 0 and b < 0:
@@ -72,6 +81,7 @@ def mod(a, b):
         q = a // b
         r = a % b
     return q, r
+
 
 def multiplicative_inverse(a, b):
     y0 = 0
@@ -88,6 +98,7 @@ def multiplicative_inverse(a, b):
         a = b
         b = r
     return y0
+
 
 def make_mulitiplicative_inverse(a, b):
     y = multiplicative_inverse(a, b)
@@ -137,7 +148,6 @@ def handler(conn, rsa_keys_1, msg):
             conn.send(sjs_1_2.encode())
             logging.info("[*] Sent AES-encrypted message to Alice: {}".format(sjs_1_2))
 
-
             rbytes_2 = conn.recv(1024)
             rjs_2 = rbytes_2.decode()
             if not rjs_2:
@@ -151,7 +161,9 @@ def handler(conn, rsa_keys_1, msg):
             encrypted_response = base64.b64decode(rmsg_2["encryption"])
             decrypted_response = decrypt(symmetric_key, encrypted_response).decode()
             decrypted_response = decrypted_response[0 : -ord(decrypted_response[-1])]
-            logging.info("[*] Decrypted message from Alice: {}".format(decrypted_response))
+            logging.info(
+                "[*] Decrypted message from Alice: {}".format(decrypted_response)
+            )
 
     except Exception as e:
         logging.error("An error occurred: {}".format(e))
@@ -164,7 +176,7 @@ def run(addr, port, msg):
     Alice = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     Alice.bind((addr, port))
     Alice.listen(10)
-    logging.info("[*] Alice is listening on {}:{}".format(addr, port))
+    logging.info("[*] Bob is listening on {}:{}".format(addr, port))
 
     while True:
         conn, info = Alice.accept()

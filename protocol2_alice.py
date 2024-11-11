@@ -105,6 +105,7 @@ def run(addr, port, msg):
     logging.info("[*] Received RSA public key (e={}, n={})".format(e, n))
 
     symmetric_key = bytes([random.randint(0, 255) for _ in range(32)])
+    symmetric_key = bytes(symmetric_key)
     encrypted_key = RSA_encrypt(symmetric_key, e, n)
     logging.info("[*] Generated symmetric key: {}".format(symmetric_key))
     logging.info("[*] Encrypted symmetric key: {}".format(encrypted_key))
