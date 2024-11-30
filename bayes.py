@@ -4,10 +4,12 @@ import argparse
 import logging
 
 def training(instances, labels):
-    pass
+    print(instances, labels)
+    return 0
 
 def predict(instance, parameters):
-    pass
+    print(instance, parameters)
+    return 1
 
 def report(predictions, answers):
     if len(predictions) != len(answers):
