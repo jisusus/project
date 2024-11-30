@@ -58,7 +58,7 @@ def is_gen(g,n):
         return True
 
 def gen_gen(bool,n):
-    g = random.randint(1,n-1)
+    g = random.randint(1,n-1) 
     while is_gen(g,n) != bool:
         g = random.randint(1,n-1)
     return g
