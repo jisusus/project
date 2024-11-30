@@ -64,12 +64,12 @@ def calculate_probability(x, mean, stdev):
 	return (1 / (sqrt(2 * pi) * stdev)) * exponent
  
 # Calculate the probabilities of predicting each class for a given row
-def calculate_class_probabilities(summaries, row):
+def calculate_class_probabilities(summaries, row, list):
 	total_rows = sum([summaries[label][0][2] for label in summaries])
 	probabilities = dict()
 	for class_value, class_summaries in summaries.items():
 		probabilities[class_value] = summaries[class_value][0][2]/float(total_rows)
-		for i in range(len(class_summaries)):
+		for i in list:
 			mean, stdev, _ = class_summaries[i]
 			probabilities[class_value] *= calculate_probability(row[i+1], mean, stdev)
 	return probabilities
@@ -78,8 +78,8 @@ def training(instances, labels):
     summaries = summarize_by_class(instances, labels)
     return summaries
 
-def predict(instance, parameters):
-    probabilities = calculate_class_probabilities(parameters, instance)
+def predict(instance, parameters, list):
+    probabilities = calculate_class_probabilities(parameters, instance, list)
     best_label, best_prob = None, -1
     for class_value, probability in probabilities.items():
         if best_label is None or probability > best_prob:
@@ -144,7 +144,7 @@ def load_raw_data(fname):
             labels.append(tmp[-1])
     return instances, labels
 
-def run(train_file, test_file):
+def run(train_file, test_file, parameter):
     # training phase
     instances, labels = load_raw_data(train_file)
     logging.debug("instances: {}".format(instances))
@@ -155,7 +155,7 @@ def run(train_file, test_file):
     instances, labels = load_raw_data(test_file)
     predictions = []
     for instance in instances:
-        result = predict(instance, parameters)
+        result = predict(instance, parameters, parameter)
         if result not in [0, 1]:
             logging.error("The result must be either 0 or 1")
             sys.exit(1)
@@ -170,7 +170,8 @@ def command_line_args():
     parser.add_argument("-t", "--training", required=True, metavar="<file path to the training dataset>", help="File path of the training dataset", default="training.csv")
     parser.add_argument("-u", "--testing", required=True, metavar="<file path to the testing dataset>", help="File path of the testing dataset", default="testing.csv")
     parser.add_argument("-l", "--log", help="Log level (DEBUG/INFO/WARNING/ERROR/CRITICAL)", type=str, default="INFO")
-
+    parser.add_argument("-p", "--parameter", help="(avg/max/min)*(temperature/humidity), power", type=str, default="0,1,2,3,4,5,6")
+    
     args = parser.parse_args()
     return args
 
@@ -186,7 +187,8 @@ def main():
         logging.error("The testing dataset does not exist: {}".format(args.testing))
         sys.exit(1)
 
-    run(args.training, args.testing)
+    parameter_list = list(map(int, args.parameter.split(",")))
+    run(args.training, args.testing, parameter_list)
 
 if __name__ == "__main__":
     main()
