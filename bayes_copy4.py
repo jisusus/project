@@ -247,19 +247,7 @@ def main():
     for combo in all_combinations:
         a = combo
         print(a)
-        f1_score = run(args.training, args.testing, a)
-        a.insert(0, f1_score)
-        accuracy.append(a)
-
-    best_score = 0
-    best_combo = []
-    for item in accuracy:
-        if item[0] > best_score:
-            best_score = item[0]
-            best_combo = item[1::]
-    print(best_score, best_combo)
-    print(accuracy)
-
+        run(args.training, args.testing, a)
 
 if __name__ == "__main__":
     main()
