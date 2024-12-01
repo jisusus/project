@@ -140,12 +140,13 @@ def report(predictions, answers):
         f1_score = 0.0
         logging.warning("F1_score cannot be calculated because tp + fn == 0.")
     else:
-        f1_score = 2*(recall*precision)/(recall+precision)    
+        f1_score = 2*(recall*precision)/(recall+precision)
     
     logging.info("accuracy: {:.2f}%".format(accuracy))
     logging.info("precision: {:.2f}%".format(precision))
     logging.info("recall: {:.2f}%".format(recall))
     logging.info("f1_score: {:.2f}%".format(f1_score))
+    return f1_score
     
 def load_raw_data(fname):
     instances = []
@@ -186,7 +187,8 @@ def run(train_file, test_file, parameter):
         predictions.append(result)
     
     # report
-    report(predictions, labels)
+    f1 = report(predictions, labels)
+    return f1
 
 def command_line_args():
     parser = argparse.ArgumentParser()
@@ -215,10 +217,24 @@ def main():
     
     all_combinations = generate_all_combinations(parameter_list)
 
+    accuracy = []
+
     for combo in all_combinations:
         a = combo
         print(a)
-        run(args.training, args.testing, a)    
+        f1_score = run(args.training, args.testing, a)
+        a.insert(0, f1_score)
+        accuracy.append(a)
+
+    best_score = 0
+    best_combo = []
+    for item in accuracy:
+        if item[0] > best_score:
+            best_score = item[0]
+            best_combo = item[1::]
+    print(best_score, best_combo)
+
+              
 
 if __name__ == "__main__":
     main()
