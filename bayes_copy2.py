@@ -5,6 +5,13 @@ import logging
 from math import sqrt
 from math import pi
 from math import exp
+from itertools import combinations
+
+def generate_all_combinations(lst):
+    all_combinations = []
+    for r in range(2, len(lst) + 1):  # 2개부터 n개까지 조합 생성
+        all_combinations.extend([list(combo) for combo in combinations(lst, r)])
+    return all_combinations
 
 def separate_by_class(instance, label):
 	separated = dict()
@@ -171,6 +178,7 @@ def command_line_args():
     parser.add_argument("-u", "--testing", required=True, metavar="<file path to the testing dataset>", help="File path of the testing dataset", default="testing.csv")
     parser.add_argument("-l", "--log", help="Log level (DEBUG/INFO/WARNING/ERROR/CRITICAL)", type=str, default="INFO")
     parser.add_argument("-p", "--parameter", help="(avg/max/min)*(temperature/humidity), power", type=str, default="0,1,2,3,4,5,6")
+    parser.add_argument("-n", type=int, default=5)
     
     args = parser.parse_args()
     return args
@@ -188,7 +196,13 @@ def main():
         sys.exit(1)
 
     parameter_list = list(map(int, args.parameter.split(",")))
-    run(args.training, args.testing, parameter_list)
+    
+    all_combinations = generate_all_combinations(parameter_list)
+
+    for combo in all_combinations:
+        a = combo
+        print(a)
+        run(args.training, args.testing, a)    
 
 if __name__ == "__main__":
     main()
