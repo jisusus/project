@@ -233,7 +233,6 @@ def main():
             best_score = item[0]
             best_combo = item[1::]
     print(best_score, best_combo)
-    print(accuracy)
               
 
 if __name__ == "__main__":
