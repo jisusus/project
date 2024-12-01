@@ -76,7 +76,7 @@ def calculate_probability(x, mean, stdev):
     return (1 / (sqrt(2 * pi) * stdev)) * exponent
 
 
-# Calculate the probabilities of predicting each class for a given row
+# Calculate the probabilities of predicting each class for a given row(MAP)
 def calculate_class_probabilities(summaries, row, list):
     total_rows = sum([summaries[label][0][2] for label in summaries])
     probabilities = dict()
@@ -145,12 +145,12 @@ def report(predictions, answers):
     else:
         recall = round(tp / (tp + fn), 2) * 100
 
-    if recall+precision == 0:  # ZeroDivisionError 방지
+    if recall + precision == 0:  # ZeroDivisionError 방지
         f1_score = 0.0
         logging.warning("F1_score cannot be calculated because tp + fn == 0.")
     else:
-        f1_score = 2*(recall*precision)/(recall+precision)
-    
+        f1_score = 2 * (recall * precision) / (recall + precision)
+
     logging.info("accuracy: {:.2f}%".format(accuracy))
     logging.info("precision: {:.2f}%".format(precision))
     logging.info("recall: {:.2f}%".format(recall))
@@ -259,10 +259,6 @@ def main():
     for combo in all_combinations:
         a = combo
         print(a)
-<<<<<<< HEAD
-        run(args.training, args.testing, a)
-
-=======
         f1_score = run(args.training, args.testing, a)
         a.insert(0, f1_score)
         accuracy.append(a)
@@ -275,8 +271,7 @@ def main():
             best_combo = item[1::]
     print(best_score, best_combo)
     print(accuracy)
-              
->>>>>>> 7217a7a5ea8f342ba16992ec4265f0c75eabc7fe
+
 
 if __name__ == "__main__":
     main()
